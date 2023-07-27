@@ -1,7 +1,7 @@
 package ru.praktikum.scooter;
 
-import java.io.File;
-
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.response.Response;
 import io.restassured.RestAssured;
@@ -9,12 +9,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.notNullValue;
 
 import ru.praktikum.scooter.client.CourierClient;
+import ru.praktikum.scooter.model.Courier;
 
 public class CourierCreateTests {
-    private File loginData;
+
+    private int courierId;
 
     @Before
     public void setUp() {
@@ -24,44 +25,55 @@ public class CourierCreateTests {
     @Test
     @DisplayName("Проверка правильности создания курьера")
     public void correctCreateCourier() {
-        File jsonCreateData = new File("src/test/resources/createCourierCorrectDataWhenCreate.json");
-        loginData = new File("src/test/resources/createCourierCorrectDataWhenLogin.json");
+        Courier courier = new Courier();
+        courier.setLogin("Naom5m07");
+        courier.setPassword("Okoko_133324");
+        courier.setFirstName("Lego");
+        Gson gson = new GsonBuilder().create();
+        String jsonCreateData = gson.toJson(courier);
         CourierClient client = new CourierClient();
-
-        client.getCreateCourierResponseCorrect(jsonCreateData)
+        Response response = client.getCreateCourierResponse(jsonCreateData)
                 .then()
                 .statusCode(201)
                 .and()
-                .assertThat().body("ok", equalTo(true));
+                .assertThat().body("ok", equalTo(true))
+                .extract().response();
+
+        courierId = client.parseCourierIdFromLoginCourierResponse(response);
     }
 
     @Test
     @DisplayName("Проверка сообщения об ошибке для создания существующего курьера")
     public void whenCreateExistingCourierThenNotOk() {
-        File jsonCreateData = new File("src/test/resources/createCourierCorrectDataWhenCreate.json");
-        loginData = new File("src/test/resources/createCourierCorrectDataWhenLogin.json");
+        Courier courier = new Courier();
+        courier.setLogin("Naom5m02");
+        courier.setPassword("Okoko_133324");
+        courier.setFirstName("Lego");
+        Gson gson = new GsonBuilder().create();
+        String jsonCreateData = gson.toJson(courier);
         CourierClient client = new CourierClient();
-
-        client.getCreateCourierResponseCorrect(jsonCreateData)
-                .then()
-                .statusCode(201)
-                .and()
-                .assertThat().body("ok", equalTo(true));
-
-        client.getCreateCourierResponseWhenTryToCreateExistingCourier(jsonCreateData)
+        Response response = client.getCreateCourierResponse(jsonCreateData)
                 .then()
                 .statusCode(409)
                 .and()
-                .assertThat().body("message", equalTo("Этот логин уже используется. Попробуйте другой."));
-    }
+                .assertThat().body("message", equalTo("Этот логин уже используется. Попробуйте другой."))
+                .extract().response();
 
+        courierId = client.parseCourierIdFromLoginCourierResponse(response);
+    }
     @Test
     @DisplayName("Проверка сообщения об ошибке для создания курьера без входа в систему")
     public void whenCreateWithNoLoginThenNotOk() {
-        File json = new File("src/test/resources/createCourierDataWithoutLoginField.json");
-        loginData = null;
+        Courier courier = new Courier();
+        courier.setPassword("pahlavaYa");
+        courier.setFirstName("Novruzik");
+
+        Gson gson = new GsonBuilder().create();
+
+        String jsonCreateData = gson.toJson(courier);
+
         CourierClient client = new CourierClient();
-        client.getCreateCourierResponseWhenTryToCreateCourierWithoutLogin(json)
+        client.getCreateCourierResponse(jsonCreateData)
                 .then()
                 .statusCode(400)
                 .and()
@@ -71,31 +83,24 @@ public class CourierCreateTests {
     @Test
     @DisplayName("Проверка сообщения об ошибке для создания курьера без пароля")
     public void whenCreateWithNoPasswordThenNotOk() {
-        File json = new File("src/test/resources/createCourierDataWithoutPasswordField.json");
-        loginData = null;
+        Courier courier = new Courier();
+        courier.setLogin("novruz10000");
+        courier.setFirstName("Novruz");
+
+        Gson gson = new GsonBuilder().create();
+
+        String jsonCreateData = gson.toJson(courier);
+
         CourierClient client = new CourierClient();
-        client.getCreateCourierResponseWhenTryToCreateCourierWithoutPassword(json)
+        client.getCreateCourierResponse(jsonCreateData)
                 .then()
                 .statusCode(400)
                 .and()
                 .assertThat().body("message", equalTo("Недостаточно данных для создания учетной записи"));
     }
-
     @After
-    public void tearDown() throws Exception {
-        if (loginData != null) {
-
+    public void tearDown() {
             CourierClient client = new CourierClient();
-            Response loginCourierResponse = client.getLoginCourierResponseWhenCorrectLogin(loginData);
-            loginCourierResponse
-                    .then()
-                    .statusCode(200)
-                    .and()
-                    .assertThat().body("id", notNullValue());
-            int courierId = client.parseCourierIdFromLoginCourierResponse(loginCourierResponse);
-            client.getDeleteCourierResponseWhenCorrectDeletion(courierId)
-                    .then()
-                    .statusCode(200);
-        }
+            client.getDeleteCourierResponseWhenCorrectDeletion(courierId);
     }
 }
