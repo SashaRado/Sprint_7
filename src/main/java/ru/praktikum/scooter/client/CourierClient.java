@@ -3,49 +3,52 @@ package ru.praktikum.scooter.client;
 import io.qameta.allure.Step;
 import io.restassured.response.Response;
 import io.restassured.RestAssured;
-import ru.praktikum.scooter.model.CourierId;
+import ru.praktikum.scooter.model.Courier;
 
 import static io.restassured.RestAssured.given;
 
 public class CourierClient {
 
-    private static final String BASE_URI = "http://qa-scooter.praktikum-services.ru";
-    private static final String COURIER_URI_SUBPATH = "/api/v1/courier";
-    private static final String COURIER_LOGIN_URI_SUBPATH = "/api/v1/courier/login";
-    private static final String COURIER_DELETE = "/api/v1/courier/:id";
+    private static final String BASE_URL = "http://qa-scooter.praktikum-services.ru";
+    public static final String COURIER_BASE_URL = "/api/v1/courier";
+    public static final String COURIER_LOGIN = "/api/v1/courier/login";
 
-    // Метод для отправки JSON-строки в теле запроса
-    private Response postJson(String uri, String jsonBody) {
-        RestAssured.baseURI = BASE_URI;
+    @Step("Создание учетной записи курьера")
+    public Response createCourier(Courier courier) {
+        RestAssured.baseURI = BASE_URL;
         return given()
                 .header("Content-type", "application/json")
                 .and()
-                .body(jsonBody)
+                .body(courier)
                 .when()
-                .post(uri);
+                .post(COURIER_BASE_URL);
     }
 
-    @Step("Получение ответа при создании курьера")
-    public Response getCreateCourierResponse(String jsonBody) {
-        return postJson(COURIER_URI_SUBPATH, jsonBody);
-    }
-
-    @Step("Получение ответа для входа курьера")
-    public Response getLoginCourierResponse(String jsonBody) {
-        return postJson(COURIER_LOGIN_URI_SUBPATH, jsonBody);
-    }
-
-    @Step("Идентификатор курьера из ответа на логин курьера")
-    public int parseCourierIdFromLoginCourierResponse(Response response) {
-        CourierId courierId = response.body().as(CourierId.class);
-        return courierId.getId();
-    }
-
-    @Step("Получение ответа на запрос на удаление курьера, при правильном удалении курьера")
-    public Response getDeleteCourierResponseWhenCorrectDeletion(int id) {
-        RestAssured.baseURI = BASE_URI;
+    @Step("Авторизация")
+    public Response loginCourier(Courier courier) {
+        RestAssured.baseURI = BASE_URL;
         return given()
+                .header("Content-type", "application/json")
+                .and()
+                .body(courier)
                 .when()
-                .delete(COURIER_DELETE + "/" + Integer.toString(id));
+                .post(COURIER_LOGIN);
+    }
+
+    @Step("Удаление учетной записи курьера")
+    public void deleteCourier(Courier courier) {
+        try {
+            int id = loginCourier(courier).then().extract().path("id");
+            RestAssured.baseURI = BASE_URL;
+            given()
+                    .header("Content-type", "application/json")
+                    .and()
+                    .body(courier)
+                    .when()
+                    .delete(COURIER_BASE_URL + id);
+
+        } catch (NullPointerException e) {
+            System.out.println("Нечего удалять после теста");
+        }
     }
 }

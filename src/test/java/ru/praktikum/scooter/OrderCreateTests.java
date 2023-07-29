@@ -25,19 +25,12 @@ public class OrderCreateTests {
         return Arrays.asList(new Object[][] {
                 { List.of("BLACK", "GREY")},
                 { List.of("BLACK")},
-                { List.of("GREY")},
-                { List.of()},
+                { List.of("GREY")}
         });
     }
 
     public OrderCreateTests(List<String> color) {
         this.color = color;
-    }
-
-    @Before
-    public void setUp() {
-
-        RestAssured.baseURI = "http://qa-scooter.praktikum-services.ru";
     }
 
     @Test

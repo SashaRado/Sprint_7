@@ -9,11 +9,6 @@ import org.junit.Test;
 
 public class OrderListTests {
 
-    @Before
-    public void setUp() {
-        RestAssured.baseURI = "http://qa-scooter.praktikum-services.ru";
-    }
-
     @Test
     @DisplayName("Проверка, что в тело ответа возвращается список заказов.")
     public void correctListOrders() {
